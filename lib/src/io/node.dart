@@ -39,6 +39,8 @@ String readFile(String path) => _fs.readFileSync(path, 'utf8');
 
 bool fileExists(String path) => _fs.existsSync(path);
 
+bool dirExists(String path) => _fs.existsSync(path);
+
 @JS("process.stderr")
 external _Stderr get _stderr;
 

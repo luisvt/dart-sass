@@ -29,5 +29,8 @@ String readFile(String path) => null;
 /// Returns whether a file at [path] exists.
 bool fileExists(String path) => null;
 
+/// Returns whether a dir at [path] exists.
+bool dirExists(String path) => null;
+
 /// Gets and sets the exit code that the process will use when it exits.
 int exitCode;

@@ -22,6 +22,7 @@ import '../utils.dart';
 import '../value.dart';
 import 'interface/statement.dart';
 import 'interface/expression.dart';
+import '../sync_package_resolver/index.dart';
 
 /// A function that takes a callback with no arguments.
 typedef _ScopeCallback(callback());
@@ -40,9 +41,13 @@ typedef _ScopeCallback(callback());
 CssStylesheet evaluate(Stylesheet stylesheet,
         {Iterable<String> loadPaths,
         Environment environment,
-        bool color: false}) =>
+        bool color: false,
+        SyncPackageResolver packageResolver}) =>
     new _PerformVisitor(
-            loadPaths: loadPaths, environment: environment, color: color)
+            loadPaths: loadPaths,
+            environment: environment,
+            color: color,
+            packageResolver: packageResolver)
         .run(stylesheet);
 
 /// A visitor that executes Sass code to produce a CSS tree.
@@ -123,8 +128,13 @@ class _PerformVisitor
   /// invocations, and imports surrounding the current context.
   final _stack = <Frame>[];
 
+  final SyncPackageResolver packageResolver;
+
   _PerformVisitor(
-      {Iterable<String> loadPaths, Environment environment, bool color: false})
+      {Iterable<String> loadPaths,
+      Environment environment,
+      bool color: false,
+      this.packageResolver})
       : _loadPaths = loadPaths == null ? const [] : new List.from(loadPaths),
         _environment = environment ?? new Environment(),
         _color = color {
@@ -532,11 +542,28 @@ class _PerformVisitor
     });
   }
 
+  Uri _resolvePackageUri(DynamicImport import) {
+    var packageUri = import.url;
+    if (packageUri.scheme == 'package') {
+      if (packageResolver == null)
+        throw _exception(
+            'Can\'t resolve: "$packageUri", packageResolver is not supported by node vm',
+            import.span);
+
+      var resolvedPackageUri = packageResolver.resolveUri(packageUri);
+      if (resolvedPackageUri == null ||
+          !dirExists(p.dirname(p.fromUri(resolvedPackageUri))))
+        throw _exception('Can\'t resolve: "$packageUri"', import.span);
+      return resolvedPackageUri;
+    }
+    return packageUri;
+  }
+
   /// Loads the [Stylesheet] imported by [import], or throws a
   /// [SassRuntimeException] if loading fails.
   Stylesheet _loadImport(DynamicImport import) {
     var path = _importPaths.putIfAbsent(import, () {
-      var path = p.fromUri(import.url);
+      var path = p.fromUri(_resolvePackageUri(import));
       var extension = p.extension(path);
       var tryPath = extension == '.sass' || extension == '.scss'
           ? _tryImportPath

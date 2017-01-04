@@ -13,3 +13,5 @@ bool get hasTerminal => io.stdout.hasTerminal;
 String readFile(String path) => new io.File(path).readAsStringSync();
 
 bool fileExists(String path) => new io.File(path).existsSync();
+
+bool dirExists(String path) => new io.Directory(path).existsSync();
